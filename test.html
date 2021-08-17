@@ -2,161 +2,180 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>JS实现瀑布流</title>
+  <title>test</title>
+  <link rel="stylesheet" href="./assets/font-awesome-4.7.0/css/font-awesome.min.css">
   <style>
-    #masonry{
-      width: 100%;
-      position: relative;
-    }
-    .item{
-      width: 200px;
-      position: absolute;   /* 利用绝对定位来布局 */
-    }
-    .item img{
-      width: 100%;
-      height: auto;   /* 高度自适应 */
-    }
   </style>
 </head>
 <body>
-  <div id="masonry">
-  </div>
-  <script> 
-    /*
-    *************************************************************
-    1、等宽高度自适应瀑布流
-    2、滚动条触底自动加载图片
-    3、页面尺寸大小变化重新渲染
-    4、懒加载：未进入视窗时，只加载没有图片的div框到页面中，等进入视窗，再显示图片（实际是未进入视窗时只保存src到data-src中，此时不会加载；进入视窗后再设置src才会实际加载。这样就可以减少加载量。）（无src属性的节点懒加载无意义）
-    *************************************************************
-    */
-    function getColumns(){    //获取当前窗口能放下的最大列数并返回
-      let windowWidth = window.innerWidth;
-      let columns = parseInt(windowWidth/itemWidth);
-      return columns;
-    }
-    
-    function createDiv(imgs /* 图片信息 */, times /* 创建次数 */){    //根据传入的图片信息创建瀑布流框数组，该框的大小与图片适应，图片默认不显示，用于懒加载
+  
+  <script>
+    function createContent(data){
       let divs = [];    //临时div数组，用于保存框，append到页面上
-      for(let i = 0; i < times; i++){
-        imgs.forEach((img) => {    //创建包裹图片的div，此时图片不显示
-          let div = document.createElement('div');
-          div.className = 'item';
-          div.style.height = 200/img.width*img.height + 'px';
-          div.style.backgroundColor = '#DDDDDD';
-          let divImg = document.createElement('img');
-          divImg.setAttribute('data-src', img.src);
-          div.appendChild(divImg);
-          divs.push(div);
-        })
-      }
-      allDivs.push(...divs);    //添加到全局div数组中，用于判断是否进入视窗，懒加载
+      data.forEach((data) => {    //创建包裹图片的div，此时图片不显示
+        let div = createDiv();
+        let divText = createDivText();
+        div.appendChild(divText);
+        let divImg = createDivImg();
+        div.appendChild(divImg);
+        let detailDiv = createDetailDiv();
+        let userPhoto = createUserPhoto();
+        detailDiv.appendChild(userPhoto);
+        let userName = createUserName();
+        detailDiv.appendChild(userName);
+        let updateTime = createUpdateTime();
+        detailDiv.appendChild(updateTime);
+        let comments = createComments();
+        detailDiv.appendChild(comments);
+        let stars = createStars();
+        detailDiv.appendChild(stars);
+        div.appendChild(detailDiv);
+        divs.push(div);
+      })
+      // allDivs.push(...divs);    //添加到全局div数组中，用于判断是否进入视窗，懒加载
       return divs;
     }
 
-    function putItemsBiBao(){    //使用闭包避免将heights设置成全局变量，避免变量污染，闭包类似于创建了对于其内部函数的一个全局，在外部函数里内部函数外（全局）定义的变量就相当于在全局定义的变量，会保存其改变值，并且延长生命周期不会被释放
-      let heights = [];    //记录一行中各列的高度
-      return function (divs /* 框数组 */, resize /* 判断是否是页面大小变化 */){    //根据列数进行摆放图片
-        if(resize) heights = [];    //如果是页面大小变化，需要初始化高度数组重新渲染
-        divs.forEach((div, index) => {    //将不显示图片的div添加到页面合适位置
-          if(!resize) box.appendChild(div);
-          if(heights.length < columns){    //第一行图片
-            div.style.top = 0;   //顶格排放
-            div.style.left = index * itemWidth + index * 10 + 'px';
-            heights.push(parseInt(div.style.height));	//若没有设置行内样式可以使用getComputedStyle，否则会取不到高度
-          }
-          else{   //其他行图片
-            let minHeight = Math.min(...heights);   //获取所有列中的最小高度，优先摆放在高度最小的位置
-            let minIndex = heights.indexOf(minHeight);    //获取最小高度的索引
-            div.style.top = minHeight + 10 + 'px';
-            div.style.left = minIndex * itemWidth + minIndex * 10 + 'px';
-            heights[minIndex] = minHeight + 10 + parseInt(div.style.height);   //更新高度
-          }
-        })
-        delayLoad();
-      }
+    function createDiv(){   //创建包裹Div框
+      let div = document.createElement('div');
+      div.className = 'item';
+      div.style.width = 200/* /data.width*data.height*/ + 'px' ;
+      div.style.backgroundColor = '#DDDDDD';
+      div.style.borderRadius = '10%';
+      div.style.overflow = 'hidden';
+      div.onclick = jumpToDetail;
+      return div;
     }
 
-    function checkScroll(){   //判断滚动条到底后加载更多图片
-      let pageHeight = document.documentElement.scrollHeight;   //页面总高
-      let viewHeight = document.documentElement.clientHeight;   //视窗高度
-      let scrollTop = document.documentElement.scrollTop || window.pageYOffset || document.body.scrollTop;    //滚动条已滚动的高度，兼容不同浏览器
-      if(pageHeight - viewHeight - scrollTop === 0){
-        //加载更多图片
-        putItems(createDiv(initImgs, 2));
-      }
-      delayLoad();
-    }
-    
-    function delayLoad(){   //懒加载
-      let pageHeight = document.documentElement.scrollHeight;
-      let viewHeight = document.documentElement.clientHeight;
-      let scrollTop = document.documentElement.scrollTop || window.pageYOffset || document.body.scrollTop;    //兼容不同浏览器
-      allDivs.forEach(div => {
-        if(div.offsetTop - scrollTop <= viewHeight - 90){   //如果进入视窗，那么将图片url（存在data-src属性中）赋值给src属性，显示图片
-          let img = div.firstChild;
-          img.src = img.getAttribute('data-src');
-        }
-      })
+    function createDivText(){   //创建顶部文字内容
+      let divText = document.createElement('div');
+      divText.style.width = '100%';
+      divText.style.boxSizing = 'border-box';
+      divText.style.wordBreak = 'break-all';
+      divText.style.textAlign = 'left';
+      divText.style.padding = '5px 5px';
+      divText.style.fontSize = '13px';
+      divText.style.backgroundColor = '#A8DBFD';
+      divText.innerText = '123撒打算打算打算打算大撒打算打算打算打算大撒打算打算打算打算大撒打算打算打算打算大asdafsdfgrthytjuyjasdadasffsdfdgdfgdgzhuliye';
+      return divText;
     }
 
-    let putItems = putItemsBiBao();   //闭包函数调用
-    let itemWidth = 200;    //一个瀑布流框的宽度
-    let columns = getColumns(itemWidth);
-    let box = document.querySelector('#masonry');
-    let allDivs = [];   //全局数组，用于懒加载判断
-    let initImgs = [    //初始化图片数组，实际上应该先将从服务端获取的图片放到数组中，然后懒加载时便可以用图片的宽高来控制div的宽高，进入视图时再设置src显示图片，否则不加载图片
-      {
-        src: './assets/1.jpg',
-        width: 2896,
-        height: 1628
-      },
-      {
-        src: './assets/2.jpg',
-        width: 1440,
-        height: 900
-      },
-      {
-        src: './assets/3.jpg',
-        width: 1440,
-        height: 900
-      },
-      {
-        src: './assets/4.jpg',
-        width: 800,
-        height: 450
-      },
-      {
-        src: './assets/5.jpg',
-        width: 1440,
-        height: 900
-      },
-      {
-        src: './assets/6.jpg',
-        width: 1440,
-        height: 900
-      },
-      {
-        src: './assets/7.jpg',
-        width: 1440,
-        height: 900
-      },
-      {
-        src: './assets/8.jpg',
-        width: 1440,
-        height: 900
-      }
-    ];
-
-    window.onload = function(){
-      putItems(createDiv(initImgs, 6) /* 注意初始化图片一定要超出页面大小，否则初始化无法触发效果 */, false);
-      window.addEventListener('scroll', () => { checkScroll(box); });
+    function createDivImg(){    //晒进度
+      let divImg = document.createElement('img');
+      divImg.style.width = '100%';
+      divImg.style.height = 100 + 'px';
+      divImg.style.display = 'block';
+      return divImg;
     }
 
-    window.onresize = function(){
-      columns = getColumns(itemWidth);    //更新页面尺寸后需要重新计算列数
-      putItems(allDivs, true);   //重新渲染
+    function createDetailDiv(){   //创建底部框（用户，评论等）
+      let detailDiv = document.createElement('div');
+      detailDiv.style.position = 'relative';
+      detailDiv.style.height = '38px';
+      return detailDiv;
     }
+
+    function createUserPhoto(){   //创建用户头像
+      let userPhoto = document.createElement('div');
+      userPhoto.style.width = 30 + 'px';
+      userPhoto.style.height = 30 + 'px';
+      userPhoto.style.borderRadius = '50%';
+      userPhoto.style.border = '1px solid black';
+      userPhoto.style.position = 'absolute';
+      userPhoto.style.top = 2 + 'px';
+      userPhoto.style.left = 2 + 'px';
+      userPhoto.style.cursor = 'pointer';
+      userPhoto.onclick = jumpToUserPost;   //跳到个人发布页
+      return userPhoto;
+    }
+
+    function createUserName(){    //创建用户名
+      let userName = document.createElement('div');
+      userName.style.position = 'absolute';
+      userName.innerText = '黑色幽默';
+      userName.style.fontSize = '10px'
+      userName.style.top = 2 + 'px';
+      userName.style.left = 37 + 'px';
+      userName.style.cursor = 'pointer';
+      userName.onclick = jumpToUserPost;   //跳到个人发布页
+      return userName;
+    }
+
+    function createUpdateTime(){    //创建发布时间
+      let updateTime = document.createElement('div');
+      updateTime.style.position = 'absolute';
+      updateTime.innerText = '2021-9-5';
+      updateTime.style.fontSize = '10px'
+      updateTime.style.top = 2 + 'px';
+      updateTime.style.right = 7 + 'px';
+      return updateTime;
+    }
+
+    function createComments(){    //创建评论
+      let comments = document.createElement('div');
+      comments.innerHTML = `
+        <i style= 'font-size: 14px;' class="fa fa-commenting-o" 
+        aria-hidden="true"></i>
+      `;
+      comments.innerHTML += `
+        <div style= 'border: none; font-size: 10px; 
+        display: inline-block; width: 25px; width: 25px; position: relative;
+        top: 4px; overflow: hidden; white-space: nowrap; 
+        text-overflow: ellipsis;'>
+          111222
+        </div>
+      `;
+      comments.style.position = 'absolute';
+      comments.style.top = 15 + 'px';
+      comments.style.right = 7 + 'px';
+      comments.style.cursor = 'pointer';
+      comments.style.boxSizing = 'border-box';
+      comments.onclick = jumpToDetail;    //跳到评论页
+      return comments;
+    }
+
+    function createStars(){   //创建点赞
+      let stars = document.createElement('div');
+      stars.innerHTML = `
+        <i style= 'font-size: 14px;' class="fa fa-heart-o" 
+        aria-hidden="true"></i>
+      `;
+      stars.innerHTML += `
+        <div style= 'border: none; font-size: 10px; 
+        display: inline-block; width: 25px; position: relative;
+        top: 4px; overflow: hidden; white-space: nowrap; 
+        text-overflow: ellipsis;'>
+          200
+        </div>
+      `;
+      stars.style.position = 'absolute';
+      stars.style.top = 15 + 'px';
+      stars.style.right = 55 + 'px';
+      stars.style.cursor = 'pointer';
+      stars.style.boxSizing = 'border-box';
+      stars.onclick = addStarsNumber;    //增加点赞数
+      return stars;
+    }
+
+    function jumpToUserPost(){    //跳到个人发布页
+      // 获取该用户信息，跳到该用户主页
+      
+      event.stopPropagation();    //阻止事件进一步冒泡
+    }
+
+    function addStarsNumber(){
+      let num = this.children[1].innerText;
+      this.children[1].innerText = ++num;
+      event.stopPropagation();    //阻止事件进一步冒泡
+    }
+
+    function jumpToDetail(){
+      // 跳转到详情页，可以编辑评论等
+    }
+
+    createContent([1]).forEach(content => {
+      document.body.appendChild(content);
+    })
   </script>
 </body>
 </html>
